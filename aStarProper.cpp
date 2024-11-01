@@ -93,14 +93,14 @@ private:
 
     void handleAgent(node_a *node) {
         if (!keyFound) {
-            for (int i = max(node->pos.y - 1, 0); i < min(node->pos.y + 1, 8); i++)
-                for (int j = max(node->pos.x - 1, 0); j < min(node->pos.x + 1, 8); j++) {
+            for (int i = max(node->pos.y - 1, 0); i < min(node->pos.y + 1, 9); i++)
+                for (int j = max(node->pos.x - 1, 0); j < min(node->pos.x + 1, 9); j++) {
                     map[i][j]->danger = true;
                 }
             return;
         }
-        for (int i = max(node->pos.y - 1, 0); i < min(node->pos.y + 1, 8); i++)
-            for (int j = max(node->pos.x - 1, 0); j < min(node->pos.x + 1, 8); j++) {
+        for (int i = max(node->pos.y - 1, 0); i < min(node->pos.y + 1, 9); i++)
+            for (int j = max(node->pos.x - 1, 0); j < min(node->pos.x + 1, 9); j++) {
                 map[i][j]->danger = false;
             }
     }
@@ -160,11 +160,32 @@ private:
     }
 
     bool isClose(node_a *start, node_a *end) {
-        return abs(start->pos.x - end->pos.x) + abs(start->pos.y - end->pos.y) == 1;
+        return (abs(start->pos.x - end->pos.x) + abs(start->pos.y - end->pos.y) == 1) || (start == end);
     }
 
     node_a *findIntersection(node_a *a, node_a *b) {
-        
+        vector<node_a*> aToStart;
+        vector<node_a*> bToStart;
+
+        node_a *curr = a;
+        while (curr != map[0][0]) {
+            aToStart.push_back(curr);
+            curr = curr->parent;
+        }
+        aToStart.push_back(map[0][0]);
+
+        curr = b;
+        while (curr != map[0][0]) {
+            bToStart.push_back(curr);
+            curr = curr->parent;
+        }
+        bToStart.push_back(map[0][0]);
+
+        for (auto node : aToStart) {
+            if (find(bToStart.begin(), bToStart.end(), node) != bToStart.end()) {
+                return node;
+            }
+        }
     }
 
     void aToB(node_a *a, node_a *b) {
@@ -174,33 +195,40 @@ private:
 
         node_a *curr = a;
         while (curr != intersection) {
-            aToIntersection.push_back(curr);
             curr = curr->parent;
+            aToIntersection.push_back(curr);
         }
-        aToIntersection.push_back(curr);
         curr = b;
         while (curr != intersection) {
-            intersectionToB.push_back(curr);
             curr = curr->parent;
+            intersectionToB.push_back(curr);
         }
         reverse(intersectionToB.begin(), intersectionToB.end());
 
+        aToIntersection.insert(aToIntersection.end(), intersectionToB.begin(), intersectionToB.end());
+        for (auto el : aToIntersection) {
+            printf("m %d %d\n", el->pos.x, el->pos.y);
+            dataAwait();
+        }
     }
 
     void iteration() {
-        if (moves.empty() && keyFound) {
+        if (moves.empty()) {
             gameInProgress = false;
             return;
         }
         sort(moves.begin(), moves.end(), sorter);
+        // if (bdkPos.x + bdkPos.y >= 0 && find(moves.begin(), moves.end(), map[bdkPos.y][bdkPos.x]) != moves.end()) {
+        //     moves.erase(find(moves.begin(), moves.end(), map[bdkPos.y][bdkPos.x]));
+        //     moves.push_back(map[bdkPos.y][bdkPos.x]);
+        // }
         node_a *chosen = moves[0];
-        neoPos = chosen->pos;
         if (neoPos == kmPos) {
             gameInProgress = false;
             recreatePath();
             return;
         }
-        if (isClose(map[neoPos.y][neoPos.y], chosen)) {
+        if (isClose(map[neoPos.y][neoPos.x], chosen)) {
             printf("m %d %d\n", chosen->pos.x, chosen->pos.y);
             dataAwait();
             fixValuesAroundNode(chosen);
@@ -211,11 +239,12 @@ private:
                 }
                 if (sentinel != nullptr) handleSentinel(sentinel);
             }
-            moves.erase(moves.begin());
         }
         else {
-
+            aToB(map[neoPos.y][neoPos.x], chosen);
         }
+        moves.erase(moves.begin());
+        neoPos = chosen->pos;
     }
 
 public:
@@ -264,4 +293,5 @@ int main() {
     NeoAStar neo(perceptVar, kmX, kmY);
     // neo.printMapValues();
     neo.play();
+    cout.flush();
 }
